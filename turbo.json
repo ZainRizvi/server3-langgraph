@@ -2,6 +2,7 @@
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env"],
   "globalEnv": [
+    "LANGGRAPH_API_URL",
     "LANGSMITH_API_KEY",
     "LANGSMITH_TRACING_V2",
     "LANGSMITH_PROJECT",

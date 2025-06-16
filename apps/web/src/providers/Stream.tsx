@@ -128,7 +128,7 @@ export const StreamProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
   // Get environment variables
-  const envApiUrl: string | undefined = process.env.NEXT_PUBLIC_API_URL;
+  const envApiUrl: string | undefined = process.env.LANGGRAPH_API_URL || DEFAULT_API_URL;
   const envAssistantId: string | undefined =
     process.env.NEXT_PUBLIC_ASSISTANT_ID;
   const envApiKey: string | undefined =
@@ -194,7 +194,7 @@ export const StreamProvider: React.FC<{ children: ReactNode }> = ({
           >
             <div className="flex flex-col gap-2">
               <Label htmlFor="apiUrl">
-                Deployment URL<span className="text-rose-500">*</span>
+                LangGraph API URL
               </Label>
               <p className="text-muted-foreground text-sm">
                 This is the URL of your LangGraph deployment. Can be a local, or
@@ -204,7 +204,7 @@ export const StreamProvider: React.FC<{ children: ReactNode }> = ({
                 id="apiUrl"
                 name="apiUrl"
                 className="bg-background"
-                defaultValue={apiUrl || DEFAULT_API_URL}
+                defaultValue={apiUrl || envApiUrl}
                 required
               />
             </div>
