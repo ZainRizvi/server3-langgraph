@@ -39,6 +39,12 @@ This part creates two different exports from the core package: one for client-si
     -   **Goal:** Add testing capabilities.
     -   **Implementation:** Add `vitest` and test script following the pattern from `packages/core`.  Ensure the structure lets you run tests against both client and server side code
 
+
+- [x] **Task A.2: Extend Testing Framework.**
+    -   **File to modify:** `package.json`.
+    -   **Goal:** Add testing capabilities.
+    -   **Implementation:** Make it so that when `npm run test` is invoked from the root folder, all packages with a test script have their tests executed.
+
 ### Part 2: Create Local Agent API Endpoints
 
 This part adds API routes to the web app that can execute agents server-side.
@@ -60,6 +66,15 @@ For each part, first consider what unit tests should be added to verify that the
         -   Stream agent execution results back to client using Next.js streaming response
         -   Handle errors appropriately and return proper HTTP status codes
 
+- [ ] **Task 2.3: Implement Backend Thread ID Generation.**
+    -   **File to modify:** `apps/web/src/app/api/agents/[agentId]/stream/route.ts`.
+    -   **Goal:** Generate unique thread IDs on the server side when not provided.
+    -   **Implementation:**
+        -   Use `crypto.randomUUID()` or a similar server-side UUID generation method
+        -   Generate thread ID when `threadId` is null/undefined in the request
+        -   Include the generated thread ID in the stream response headers or initial message
+        -   Ensure thread ID is consistent throughout the conversation session
+
 ### Part 3: Refactor StreamLocal to Use API
 
 This part updates StreamLocal to make API calls instead of importing server-side packages.
@@ -75,12 +90,14 @@ This part updates StreamLocal to make API calls instead of importing server-side
         -   Implement proper streaming response handling using fetch with ReadableStream
         -   Handle thread ID generation client-side
 
-- [ ] **Task 3.2: Implement Thread ID Generation.**
+- [ ] **Task 3.2: Update StreamLocal to Handle Backend-Generated Thread IDs.**
     -   **File to modify:** `apps/web/src/providers/StreamLocal.tsx`.
-    -   **Goal:** Generate unique thread IDs for new conversations.
+    -   **Goal:** Remove client-side thread ID generation and handle server-generated IDs.
     -   **Implementation:**
-        -   Use existing `uuid` dependency (already in package.json)
-        -   Generate UUID when `threadId` is null and call `onThreadId` callback
+        -   Remove client-side UUID generation logic
+        -   Extract thread ID from server response (headers or initial stream message)
+        -   Call `onThreadId` callback with the server-generated thread ID
+        -   Ensure proper error handling if thread ID extraction fails
 
 - [ ] **Task 3.3: Fix Message Duplication and Configuration.**
     -   **File to modify:** `apps/web/src/providers/StreamLocal.tsx`.
