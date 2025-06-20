@@ -1,0 +1,20 @@
+{
+  "name": "@repo/core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "turbo build:internal --filter=@repo/core",
+    "build:internal": "tsc",
+    "lint": "eslint . --max-warnings 0",
+    "generate:component": "turbo gen react-component"
+  },
+  "exports": {
+    "./*": "./src/*.ts"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "0.1.0",
+    "@repo/typescript-config": "0.1.0",
+    "typescript": "^5.5.4"
+  }
+} 
