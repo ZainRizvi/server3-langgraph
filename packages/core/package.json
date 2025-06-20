@@ -4,17 +4,41 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "turbo build:internal --filter=@repo/core",
-    "build:internal": "tsc",
     "lint": "eslint . --max-warnings 0",
-    "generate:component": "turbo gen react-component"
+    "generate:component": "turbo gen react-component",
+    "build": "npm run prebuild && tsc",
+    "prebuild": "node ./scripts/generate-agent-exports.mjs"
   },
-  "exports": {
-    "./*": "./src/*.ts"
+  "dependencies": {
+    "@langchain/core": "^0.3.42",
+    "@langchain/langgraph": "^0.2.55",
+    "langchain": "^0.3.19",
+    "dotenv": "^16.4.5",
+    "uuid": "^10.0.0",
+    "zod": "^3.23.8",
+    "@langchain/community": "^0.3.35",
+    "@langchain/anthropic": "^0.3.15",
+    "@elastic/elasticsearch": "^8.17.1",
+    "@langchain/pinecone": "^0.2.0",
+    "@langchain/mongodb": "^0.1.0",
+    "mongodb": "^6.14.2",
+    "@pinecone-database/pinecone": "^5.1.1",
+    "@langchain/cohere": "^0.3.2",
+    "@langchain/openai": "^0.4.4"
   },
   "devDependencies": {
     "@repo/eslint-config": "0.1.0",
     "@repo/typescript-config": "0.1.0",
     "typescript": "^5.5.4"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json",
+    "./agents/memory-agent": "./src/agents/memory-agent/graph.ts",
+    "./agents/react-agent": "./src/agents/react-agent/graph.ts",
+    "./agents/research-agent/index-graph": "./src/agents/research-agent/index-graph/graph.ts",
+    "./agents/research-agent/retrieval-graph": "./src/agents/research-agent/retrieval-graph/graph.ts",
+    "./agents/research-agent/retrieval-graph/researcher-graph": "./src/agents/research-agent/retrieval-graph/researcher-graph/graph.ts",
+    "./agents/retrieval-agent": "./src/agents/retrieval-agent/graph.ts"
   }
-} 
+}
