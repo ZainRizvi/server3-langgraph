@@ -18,6 +18,7 @@ import {
 } from "@langchain/langgraph-sdk/react-ui";
 import { last } from "lodash";
 import { agentMetadata } from "@repo/core/src/agents/metadata";
+import { useQueryState } from "nuqs";
 
 // Validate agent existence using metadata
 function validateAgent(assistantId: string): void {
@@ -44,6 +45,35 @@ function transformLangChainMessage(langChainMessage: any): any {
   
   // Fallback
   return langChainMessage;
+}
+
+// Helper function to merge messages intelligently
+function mergeMessages(existingMessages: Message[], newMessages: Message[]): Message[] {
+  if (!newMessages.length) return existingMessages;
+  
+  // Filter out messages without content
+  const validNewMessages = newMessages.filter(m => m.content);
+  if (!validNewMessages.length) return existingMessages;
+  
+  // If we have new AI messages, replace the last AI message or append
+  const aiMessages = validNewMessages.filter(m => m.type === 'ai');
+  if (aiMessages.length > 0) {
+    // Find the last AI message in existing messages
+    const lastAiIndex = existingMessages.findLastIndex(m => m.type === 'ai');
+    
+    if (lastAiIndex >= 0) {
+      // Replace the last AI message with the latest one
+      const updatedMessages = [...existingMessages];
+      updatedMessages[lastAiIndex] = aiMessages[aiMessages.length - 1];
+      return updatedMessages;
+    } else {
+      // No existing AI message, append the new one
+      return [...existingMessages, aiMessages[aiMessages.length - 1]];
+    }
+  }
+  
+  // For non-AI messages, just append them
+  return [...existingMessages, ...validNewMessages];
 }
 
 // --- preserved interfaces ---
@@ -219,7 +249,7 @@ export function useLocalStream({
 
                     setValues((prev) => ({
                       ...prev,
-                      messages: [...(prev.messages ?? []), ...transformedMessages].filter(m => m.content),
+                      messages: mergeMessages(prev.messages, transformedMessages),
                     }));
                   }
 
@@ -284,10 +314,18 @@ export function useLocalStream({
 export const StreamProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
-  // For now, we'll hardcode the assistantId. In a real app, this
-  // would likely come from the URL or a selection component.
-  // TODO: Add a selection component for the assistantId
-  const [assistantId] = useState("memory-agent");
+  // Use URL parameter for assistantId with sensible default
+  const [assistantId] = useQueryState('assistantId', {
+    defaultValue: 'memory-agent',
+    parse: (value) => {
+      // Validate the assistantId from URL
+      if (value && agentMetadata[value]) {
+        return value;
+      }
+      return 'memory-agent'; // Fallback to default
+    }
+  });
+  
   const [threadId, setThreadId] = useState<string | null>(null);
 
   const streamValue = useLocalStream({

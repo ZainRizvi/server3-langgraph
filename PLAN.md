@@ -99,7 +99,7 @@ This part updates StreamLocal to make API calls instead of importing server-side
         -   Call `onThreadId` callback with the server-generated thread ID
         -   Ensure proper error handling if thread ID extraction fails
 
-- [ ] **Task 3.3: Fix Message Duplication and Configuration.**
+- [x] **Task 3.3: Fix Message Duplication and Configuration.**
     -   **File to modify:** `apps/web/src/providers/StreamLocal.tsx`.
     -   **Goal:** Fix message processing and add URL parameter support.
     -   **Implementation:**

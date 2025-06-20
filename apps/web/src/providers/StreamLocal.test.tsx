@@ -349,4 +349,123 @@ describe('StreamLocal', () => {
       expect(result.current.messages).toHaveLength(2) // human + ai message
     })
   })
+
+  describe('Message Duplication and Configuration', () => {
+    it('should avoid message duplication by processing only final state', async () => {
+      // Mock a stream that sends multiple updates for the same message
+      const mockResponse = {
+        ok: true,
+        body: new ReadableStream({
+          start(controller) {
+            // Send initial partial message
+            controller.enqueue(new TextEncoder().encode('data: {"messages": [{"content": "Hello", "type": "ai"}]}\n\n'))
+            // Send updated message with more content
+            controller.enqueue(new TextEncoder().encode('data: {"messages": [{"content": "Hello there", "type": "ai"}]}\n\n'))
+            // Send final complete message
+            controller.enqueue(new TextEncoder().encode('data: {"messages": [{"content": "Hello there! How can I help you?", "type": "ai"}]}\n\n'))
+            controller.close()
+          }
+        })
+      }
+      ;(global.fetch as any).mockResolvedValue(mockResponse)
+
+      const { result } = renderHook(() =>
+        useLocalStream({
+          assistantId: 'memory-agent',
+          threadId: 'test-thread',
+          onThreadId: vi.fn(),
+        })
+      )
+
+      await act(async () => {
+        result.current.submit({ messages: [{ content: 'Hi', type: 'human' }] })
+      })
+
+      // Wait for stream processing
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      // Should only have 2 messages: human + final AI message (not intermediate states)
+      expect(result.current.messages).toHaveLength(2)
+      expect(result.current.messages[0].content).toBe('Hi') // Human message
+      expect(result.current.messages[1].content).toBe('Hello there! How can I help you?') // Final AI message
+    })
+
+    it('should handle configurable options correctly', async () => {
+      const mockResponse = {
+        ok: true,
+        body: new ReadableStream({
+          start(controller) {
+            controller.close()
+          }
+        })
+      }
+      ;(global.fetch as any).mockResolvedValue(mockResponse)
+
+      const { result } = renderHook(() =>
+        useLocalStream({
+          assistantId: 'memory-agent',
+          threadId: 'test-thread',
+          onThreadId: vi.fn(),
+        })
+      )
+
+      const configurable = {
+        model: 'anthropic/claude-3-5-sonnet-latest',
+        temperature: 0.7,
+        maxTokens: 1000
+      }
+
+      await act(async () => {
+        result.current.submit(
+          { messages: [{ content: 'test', type: 'human' }] },
+          { configurable }
+        )
+      })
+
+      expect(global.fetch).toHaveBeenCalledWith(
+        '/api/agents/memory-agent/stream',
+        expect.objectContaining({
+          body: JSON.stringify({
+            messages: [{ content: 'test', type: 'human' }],
+            threadId: 'test-thread',
+            configurable,
+          }),
+        })
+      )
+    })
+
+    it('should filter out messages without content', async () => {
+      const mockResponse = {
+        ok: true,
+        body: new ReadableStream({
+          start(controller) {
+            // Send messages with and without content
+            controller.enqueue(new TextEncoder().encode('data: {"messages": [{"content": "Valid message", "type": "ai"}, {"type": "ai"}, {"content": "", "type": "ai"}]}\n\n'))
+            controller.close()
+          }
+        })
+      }
+      ;(global.fetch as any).mockResolvedValue(mockResponse)
+
+      const { result } = renderHook(() =>
+        useLocalStream({
+          assistantId: 'memory-agent',
+          threadId: 'test-thread',
+          onThreadId: vi.fn(),
+        })
+      )
+
+      await act(async () => {
+        result.current.submit({ messages: [{ content: 'test', type: 'human' }] })
+      })
+
+      // Wait for stream processing
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      // Should only have 2 messages: human + valid AI message (filtered out empty ones)
+      expect(result.current.messages).toHaveLength(2)
+      expect(result.current.messages[0].content).toBe('test') // Human message
+      expect(result.current.messages[1].content).toBe('Valid message') // Only valid AI message
+    })
+  })
 }) 
