@@ -13,7 +13,8 @@ The core issue is architectural: **StreamLocal should not import server-side pac
 
 ## Plan
 
-After completing each task, run `npm install`, `npm run build`, and `npm run test` for basic sanity checks.  
+After completing each task, run `npm install`, `npm run build`, and `npm run test` for basic sanity checks. 
+If the tests pass, mark the task as complete in PLAN.md
 
 ### Part 1: Create Dual Agent Exports
 
@@ -43,14 +44,14 @@ This part creates two different exports from the core package: one for client-si
 This part adds API routes to the web app that can execute agents server-side.
 For each part, first consider what unit tests should be added to verify that the functionality works, add those unit tests (which are expected to fail at first) and then implement the task and ensure those tests now pass. A TDD approach.
 
-- [ ] **Task 2.1: Create Agent List API Route.**
+- [x] **Task 2.1: Create Agent List API Route.**
     -   **File to create:** `apps/web/src/app/api/agents/route.ts`.
     -   **Goal:** Provide an endpoint to list available agents.
     -   **Implementation:**
         -   Import `agentMetadata` from `@repo/core/agents/metadata` 
         -   Return JSON list of available agents with their metadata
 
-- [ ] **Task 2.2: Create Agent Stream API Route.**
+- [x] **Task 2.2: Create Agent Stream API Route.**
     -   **File to create:** `apps/web/src/app/api/agents/[agentId]/stream/route.ts`.
     -   **Goal:** Create a streaming API endpoint that executes agents server-side.
     -   **Implementation:**
@@ -96,6 +97,14 @@ This part updates StreamLocal to make API calls instead of importing server-side
         -   Import types from `@langchain/langgraph-sdk/react`
         -   Match the interface provided by StreamExternal as closely as possible
         -   Use type assertions for simplified local implementations
+
+- [ ] **Task 3.5: Unify Stream Context Types and Remove Temporary Casts.**
+    -   **Files to modify:** `apps/web/src/providers/StreamLocal.tsx`, `apps/web/src/components/thread/messages/ai.tsx`, `apps/web/src/components/thread/messages/human.tsx`
+    -   **Goal:** Ensure that the StreamLocal context matches the type/interface expected by StreamExternal and the UI components, and remove all temporary `as any` type casts added for build compatibility.
+    -   **Implementation:**
+        -   Update StreamLocal to provide all required fields and methods.
+        -   Refactor UI components to use the unified type without any casts.
+        -   Remove all `as any` usages related to stream context.
 
 ### Part 4: Add Validation and Testing
 
