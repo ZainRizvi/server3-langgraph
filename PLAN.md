@@ -13,7 +13,7 @@ The core issue is architectural: **StreamLocal should not import server-side pac
 
 ## Plan
 
-After completing each task, run `npm install` and `npm run build` for basic sanity checks.  
+After completing each task, run `npm install`, `npm run build`, and `npm run test` for basic sanity checks.  
 
 ### Part 1: Create Dual Agent Exports
 
@@ -33,7 +33,7 @@ This part creates two different exports from the core package: one for client-si
 
 ### Special Part A: Add Validation and Testing
 
-- [ ] **Task A.1: Set Up Testing Framework.**
+- [x] **Task A.1: Set Up Testing Framework.**
     -   **File to modify:** `apps/web/package.json`.
     -   **Goal:** Add testing capabilities.
     -   **Implementation:** Add `vitest` and test script following the pattern from `packages/core`.  Ensure the structure lets you run tests against both client and server side code
@@ -41,6 +41,7 @@ This part creates two different exports from the core package: one for client-si
 ### Part 2: Create Local Agent API Endpoints
 
 This part adds API routes to the web app that can execute agents server-side.
+For each part, first consider what unit tests should be added to verify that the functionality works, add those unit tests (which are expected to fail at first) and then implement the task and ensure those tests now pass. A TDD approach.
 
 - [ ] **Task 2.1: Create Agent List API Route.**
     -   **File to create:** `apps/web/src/app/api/agents/route.ts`.
