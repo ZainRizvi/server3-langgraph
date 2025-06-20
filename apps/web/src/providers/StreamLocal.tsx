@@ -16,6 +16,7 @@ import {
   type UIMessage,
   type RemoveUIMessage,
 } from "@langchain/langgraph-sdk/react-ui";
+import { useStream } from "@langchain/langgraph-sdk/react";
 import { last } from "lodash";
 import { agentMetadata } from "@repo/core/src/agents/metadata";
 import { useQueryState } from "nuqs";
@@ -80,18 +81,17 @@ function mergeMessages(existingMessages: Message[], newMessages: Message[]): Mes
 
 export type StateType = { messages: Message[]; ui?: UIMessage[] };
 
-// This is the interface our new useLocalStream hook will return, matching the original.
-export type StreamContextType = {
-  messages: Message[];
-  isLoading: boolean;
-  error: Error | undefined;
-  values: StateType;
-  interrupt: HumanInterrupt | HumanInterrupt[] | undefined;
-  submit: (payload: any, options?: any) => void;
-  getMessagesMetadata: (message: Message) => any;
-  setBranch: (checkpoint: Checkpoint) => void;
-  stop: () => void;
-};
+// Use the same type as StreamExternal for consistency
+type StreamContextType = ReturnType<typeof useStream<
+  StateType,
+  {
+    UpdateType: {
+      messages?: Message[] | Message | string;
+      ui?: (UIMessage | RemoveUIMessage)[] | UIMessage | RemoveUIMessage;
+    };
+    CustomEventType: UIMessage | RemoveUIMessage;
+  }
+>>;
 
 // --- react context ---
 
@@ -119,7 +119,7 @@ export function useLocalStream({
   threadId,
   onThreadId,
 }: LocalStreamProps): StreamContextType {
-  const [values, setValues] = useState<StateType>({ messages: [] });
+  const [values, setValues] = useState<StateType>({ messages: [], ui: [] });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | undefined>(undefined);
   const [interrupt, setInterrupt] = useState<
@@ -283,29 +283,39 @@ export function useLocalStream({
     [assistantId, threadId, isLoading, onThreadId],
   );
 
-  const getMessagesMetadata = useCallback((message: Message) => {
+  const getMessagesMetadata = useCallback((message: Message, index?: number) => {
     // This is a placeholder. A real implementation would need to track
     // checkpoints and branches, which is complex to do locally without a
     // persistent checkpointer.
-    return {};
+    return {
+      messageId: message.id || '',
+      firstSeenState: undefined,
+      branch: undefined,
+      branchOptions: undefined,
+    };
   }, []);
 
-  const setBranch = useCallback((checkpoint: Checkpoint) => {
+  const setBranch = useCallback((branch: string) => {
       // Placeholder for branch switching logic.
       // This would involve re-running the stream from a given checkpoint.
-      console.log("Switching branch to checkpoint:", checkpoint);
+      console.log("Switching branch to:", branch);
   }, []);
 
   return {
-    messages: values.messages,
-    isLoading,
-    error,
     values,
-    interrupt,
-    submit,
-    getMessagesMetadata,
-    setBranch,
+    error,
+    isLoading,
     stop,
+    submit,
+    branch: 'main', // Default branch name
+    setBranch,
+    history: [], // Empty history for local implementation
+    experimental_branchTree: { type: 'sequence', items: [] }, // Empty tree
+    interrupt: interrupt ? { when: 'now', value: interrupt } : undefined,
+    messages: values.messages,
+    getMessagesMetadata,
+    client: null as any, // Placeholder client
+    assistantId,
   };
 }
 

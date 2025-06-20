@@ -11,11 +11,17 @@ The project has two streaming providers for the agent chat interface:
 
 The core issue is architectural: **StreamLocal should not import server-side packages directly**. Instead, it should make API calls to the web app's backend, which then executes the agents server-side and streams the results back.
 
+## Testing
+
+- Always write unit tests before starting any tasks.
+- After completing each task, run the following commands from root to ensure everything is still working:
+  - `npm install`
+  - `npm run build`
+  - `npm run test` 
+- If the tests pass, mark the task as complete in PLAN.md
+
+
 ## Plan
-
-After completing each task, run `npm install`, `npm run build`, and `npm run test` for basic sanity checks. 
-If the tests pass, mark the task as complete in PLAN.md
-
 ### Part 1: Create Dual Agent Exports
 
 This part creates two different exports from the core package: one for client-side use (agent metadata only) and one for server-side use (full agent implementations).
@@ -66,7 +72,7 @@ For each part, first consider what unit tests should be added to verify that the
         -   Stream agent execution results back to client using Next.js streaming response
         -   Handle errors appropriately and return proper HTTP status codes
 
-- [ ] **Task 2.3: Implement Backend Thread ID Generation.**
+- [x] **Task 2.3: Implement Backend Thread ID Generation.**
     -   **File to modify:** `apps/web/src/app/api/agents/[agentId]/stream/route.ts`.
     -   **Goal:** Generate unique thread IDs on the server side when not provided.
     -   **Implementation:**
@@ -90,7 +96,7 @@ This part updates StreamLocal to make API calls instead of importing server-side
         -   Implement proper streaming response handling using fetch with ReadableStream
         -   Handle thread ID generation client-side
 
-- [ ] **Task 3.2: Update StreamLocal to Handle Backend-Generated Thread IDs.**
+- [x] **Task 3.2: Update StreamLocal to Handle Backend-Generated Thread IDs.**
     -   **File to modify:** `apps/web/src/providers/StreamLocal.tsx`.
     -   **Goal:** Remove client-side thread ID generation and handle server-generated IDs.
     -   **Implementation:**
@@ -107,7 +113,7 @@ This part updates StreamLocal to make API calls instead of importing server-side
         -   Use `useQueryState` from `nuqs` to manage `assistantId` from URL parameters
         -   Provide sensible default (e.g., `'memory-agent'`)
 
-- [ ] **Task 3.4: Unify Stream Context Type.**
+- [x] **Task 3.4: Unify Stream Context Type.**
     -   **File to modify:** `apps/web/src/providers/StreamLocal.tsx`.
     -   **Goal:** Ensure type compatibility with StreamExternal.
     -   **Implementation:**

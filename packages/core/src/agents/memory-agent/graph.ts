@@ -28,7 +28,7 @@ async function callModel(
 
   let formatted =
     memories
-      ?.map((mem) => `[${mem.key}]: ${JSON.stringify(mem.value)}`)
+      ?.map((mem: { key: string; value: any }) => `[${mem.key}]: ${JSON.stringify(mem.value)}`)
       ?.join("\n") || "";
   if (formatted) {
     formatted = `\n<memories>\n${formatted}\n</memories>`;

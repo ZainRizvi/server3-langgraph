@@ -1,14 +1,13 @@
 {
-  "extends": "@tsconfig/recommended",
+  "extends": "@repo/typescript-config/base.json",
   "compilerOptions": {
     "outDir": "./dist",
     "rootDir": "./src",
     "baseUrl": ".",
     "target": "ES2021",
     "lib": ["ES2021", "ES2022.Object", "DOM", "es2023"],
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "esModuleInterop": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
     "declaration": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
