@@ -29,11 +29,27 @@ This part creates two different exports from the core package: one for client-si
             -   `agentMetadata: Record<string, { name: string, description?: string }>` - Agent info without implementations (agent names can be derived using `Object.keys(agentMetadata)`)
         -   Update package.json exports to include both files
 
+
+
+### Special Part A: Add Validation and Testing
+
+- [ ] **Task A.1: Set Up Testing Framework.**
+    -   **File to modify:** `apps/web/package.json`.
+    -   **Goal:** Add testing capabilities.
+    -   **Implementation:** Add `vitest` and test script following the pattern from `packages/core`.  Ensure the structure lets you run tests against both client and server side code
+
 ### Part 2: Create Local Agent API Endpoints
 
 This part adds API routes to the web app that can execute agents server-side.
 
-- [ ] **Task 2.1: Create Agent Stream API Route.**
+- [ ] **Task 2.1: Create Agent List API Route.**
+    -   **File to create:** `apps/web/src/app/api/agents/route.ts`.
+    -   **Goal:** Provide an endpoint to list available agents.
+    -   **Implementation:**
+        -   Import `agentMetadata` from `@repo/core/agents/metadata` 
+        -   Return JSON list of available agents with their metadata
+
+- [ ] **Task 2.2: Create Agent Stream API Route.**
     -   **File to create:** `apps/web/src/app/api/agents/[agentId]/stream/route.ts`.
     -   **Goal:** Create a streaming API endpoint that executes agents server-side.
     -   **Implementation:**
@@ -41,13 +57,6 @@ This part adds API routes to the web app that can execute agents server-side.
         -   Accept POST requests with `{ messages, threadId?, configurable? }`
         -   Stream agent execution results back to client using Next.js streaming response
         -   Handle errors appropriately and return proper HTTP status codes
-
-- [ ] **Task 2.2: Create Agent List API Route.**
-    -   **File to create:** `apps/web/src/app/api/agents/route.ts`.
-    -   **Goal:** Provide an endpoint to list available agents.
-    -   **Implementation:**
-        -   Import `agentMetadata` from `@repo/core/agents/metadata` 
-        -   Return JSON list of available agents with their metadata
 
 ### Part 3: Refactor StreamLocal to Use API
 
@@ -103,7 +112,6 @@ This part updates StreamLocal to make API calls instead of importing server-side
         -   Mock fetch for testing stream handling
 
 ### Part 5: Enable Easy Switching Between Providers
-
 - [ ] **Task 5.1: Implement Conditional Provider Export.**
     -   **File to modify:** `apps/web/src/providers/Stream.tsx`.
     -   **Goal:** Export the correct provider based on environment variable.
