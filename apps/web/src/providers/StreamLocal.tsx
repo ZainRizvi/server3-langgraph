@@ -155,9 +155,21 @@ export function useLocalStream({
           throw new Error('No response body received');
         }
 
+        // --- Thread ID extraction logic ---
+        let threadIdHandled = false;
+        if (!threadId) {
+          // 1. Try to get from response headers
+          const headerThreadId = response.headers?.get('x-thread-id');
+          if (headerThreadId) {
+            onThreadId(headerThreadId);
+            threadIdHandled = true;
+          }
+        }
+
         // Process streaming response
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
+        let firstSSEChecked = false;
 
         try {
           while (true) {
@@ -171,14 +183,23 @@ export function useLocalStream({
               if (line.startsWith('data: ')) {
                 try {
                   const data = JSON.parse(line.slice(6));
-                  
+
+                  // --- Thread ID from first SSE message if not in headers ---
+                  if (!threadId && !threadIdHandled && !firstSSEChecked) {
+                    if (data.threadId) {
+                      onThreadId(data.threadId);
+                      threadIdHandled = true;
+                    }
+                    firstSSEChecked = true;
+                  }
+
                   if (data.error) {
                     throw new Error(data.error);
                   }
 
                   // Handle different response structures from the API
                   let messagesToAdd: any[] = [];
-                  
+
                   // Check for direct messages array
                   if (data.messages && Array.isArray(data.messages)) {
                     messagesToAdd = data.messages;
@@ -195,7 +216,7 @@ export function useLocalStream({
                   if (messagesToAdd.length > 0) {
                     // Transform LangChain messages to expected format
                     const transformedMessages = messagesToAdd.map(transformLangChainMessage);
-                    
+
                     setValues((prev) => ({
                       ...prev,
                       messages: [...(prev.messages ?? []), ...transformedMessages].filter(m => m.content),
@@ -229,7 +250,7 @@ export function useLocalStream({
         }
       }
     },
-    [assistantId, threadId, isLoading],
+    [assistantId, threadId, isLoading, onThreadId],
   );
 
   const getMessagesMetadata = useCallback((message: Message) => {

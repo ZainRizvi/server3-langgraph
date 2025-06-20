@@ -209,5 +209,144 @@ describe('StreamLocal', () => {
         })
       )
     })
+
+    it('should extract thread ID from server response headers', async () => {
+      const generatedThreadId = 'generated-thread-123'
+      const mockResponse = {
+        ok: true,
+        headers: new Headers({
+          'x-thread-id': generatedThreadId
+        }),
+        body: new ReadableStream({
+          start(controller) {
+            controller.close()
+          }
+        })
+      }
+      ;(global.fetch as any).mockResolvedValue(mockResponse)
+
+      const onThreadIdMock = vi.fn()
+      const { result } = renderHook(() =>
+        useLocalStream({
+          assistantId: 'memory-agent',
+          threadId: null,
+          onThreadId: onThreadIdMock,
+        })
+      )
+
+      await act(async () => {
+        result.current.submit({ messages: [{ content: 'test', type: 'human' }] })
+      })
+
+      // Wait for stream processing
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      expect(onThreadIdMock).toHaveBeenCalledWith(generatedThreadId)
+    })
+
+    it('should extract thread ID from stream response when not in headers', async () => {
+      const generatedThreadId = 'stream-thread-456'
+      const mockResponse = {
+        ok: true,
+        headers: new Headers({}),
+        body: new ReadableStream({
+          start(controller) {
+            // Send thread ID in initial stream message
+            const initialMessage = { threadId: generatedThreadId }
+            controller.enqueue(new TextEncoder().encode(`data: ${JSON.stringify(initialMessage)}\n\n`))
+            controller.close()
+          }
+        })
+      }
+      ;(global.fetch as any).mockResolvedValue(mockResponse)
+
+      const onThreadIdMock = vi.fn()
+      const { result } = renderHook(() =>
+        useLocalStream({
+          assistantId: 'memory-agent',
+          threadId: null,
+          onThreadId: onThreadIdMock,
+        })
+      )
+
+      await act(async () => {
+        result.current.submit({ messages: [{ content: 'test', type: 'human' }] })
+      })
+
+      // Wait for stream processing
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      expect(onThreadIdMock).toHaveBeenCalledWith(generatedThreadId)
+    })
+
+    it('should not call onThreadId when threadId is already provided', async () => {
+      const existingThreadId = 'existing-thread-789'
+      const mockResponse = {
+        ok: true,
+        headers: new Headers({
+          'x-thread-id': existingThreadId
+        }),
+        body: new ReadableStream({
+          start(controller) {
+            controller.close()
+          }
+        })
+      }
+      ;(global.fetch as any).mockResolvedValue(mockResponse)
+
+      const onThreadIdMock = vi.fn()
+      const { result } = renderHook(() =>
+        useLocalStream({
+          assistantId: 'memory-agent',
+          threadId: existingThreadId,
+          onThreadId: onThreadIdMock,
+        })
+      )
+
+      await act(async () => {
+        result.current.submit({ messages: [{ content: 'test', type: 'human' }] })
+      })
+
+      // Wait for stream processing
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      expect(onThreadIdMock).not.toHaveBeenCalled()
+    })
+
+    it('should handle missing thread ID gracefully', async () => {
+      const mockResponse = {
+        ok: true,
+        headers: new Headers({}),
+        body: new ReadableStream({
+          start(controller) {
+            // Send message without thread ID
+            controller.enqueue(new TextEncoder().encode('data: {"messages": [{"content": "test", "type": "ai"}]}\n\n'))
+            controller.close()
+          }
+        })
+      }
+      ;(global.fetch as any).mockResolvedValue(mockResponse)
+
+      const onThreadIdMock = vi.fn()
+      const { result } = renderHook(() =>
+        useLocalStream({
+          assistantId: 'memory-agent',
+          threadId: null,
+          onThreadId: onThreadIdMock,
+        })
+      )
+
+      await act(async () => {
+        result.current.submit({ messages: [{ content: 'test', type: 'human' }] })
+      })
+
+      // Wait for stream processing
+      await new Promise(resolve => setTimeout(resolve, 100))
+
+      // Should not call onThreadId if no thread ID is found
+      expect(onThreadIdMock).not.toHaveBeenCalled()
+      // Should still process messages normally
+      expect(result.current.messages).toHaveLength(2) // human + ai message
+    })
   })
 }) 

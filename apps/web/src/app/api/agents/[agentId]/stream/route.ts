@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { agentMap } from "@repo/core/src/agents";
 import { InMemoryStore } from "@langchain/langgraph";
 import { MemorySaver } from "@langchain/langgraph";
+import { randomUUID } from "crypto";
 
 export async function POST(
   request: NextRequest,
@@ -47,6 +48,9 @@ export async function POST(
       );
     }
 
+    // Generate thread ID if not provided
+    const finalThreadId = threadId || randomUUID();
+
     // Set up store and checkpointer based on environment
     // For development: use in-memory stores
     // For production: these would be configured based on environment variables
@@ -66,7 +70,7 @@ export async function POST(
     const graphConfig = {
       configurable: {
         ...configurable,
-        userId: threadId || "default",
+        userId: finalThreadId,
         model: configurable?.model || "anthropic/claude-3-7-sonnet-latest",
       },
       store,
@@ -83,6 +87,10 @@ export async function POST(
     const readable = new ReadableStream({
       async start(controller) {
         try {
+          // Send initial message with thread ID
+          const initialMessage = { threadId: finalThreadId };
+          controller.enqueue(encoder.encode(`data: ${JSON.stringify(initialMessage)}\n\n`));
+          
           for await (const chunk of stream) {
             const data = JSON.stringify(chunk);
             controller.enqueue(encoder.encode(`data: ${data}\n\n`));
@@ -101,6 +109,7 @@ export async function POST(
         "Content-Type": "text/event-stream; charset=utf-8",
         "Cache-Control": "no-cache",
         "Connection": "keep-alive",
+        "x-thread-id": finalThreadId,
       },
     });
   } catch (error) {
