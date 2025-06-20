@@ -3,9 +3,9 @@ import { RunnableConfig } from "@langchain/core/runnables";
 import { MessagesAnnotation, StateGraph } from "@langchain/langgraph";
 import { ToolNode } from "@langchain/langgraph/prebuilt";
 
-import { ConfigurationSchema, ensureConfiguration } from "./configuration.js";
-import { TOOLS } from "./tools.js";
-import { loadChatModel } from "./utils.js";
+import { ConfigurationSchema, ensureConfiguration } from "./configuration";
+import { TOOLS } from "./tools";
+import { loadChatModel } from "./utils";
 
 // Define the function that calls the model
 async function callModel(

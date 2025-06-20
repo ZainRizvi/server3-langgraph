@@ -17,15 +17,33 @@ import {
   type RemoveUIMessage,
 } from "@langchain/langgraph-sdk/react-ui";
 import { last } from "lodash";
-import { agentMap } from "@repo/core/src/agents";
+import { agentMetadata } from "@repo/core/src/agents/metadata";
 
-// Loads a graph from the agentMap based on the assistantId
-async function getGraph(assistantId: string): Promise<any> {
-  if (!agentMap.has(assistantId)) {
-    throw new Error(`Agent "${assistantId}" not found. Available agents: ${Array.from(agentMap.keys()).join(", ")}`);
+// Validate agent existence using metadata
+function validateAgent(assistantId: string): void {
+  if (!agentMetadata[assistantId]) {
+    throw new Error(`Agent "${assistantId}" not found. Available agents: ${Object.keys(agentMetadata).join(", ")}`);
+  }
+}
+
+// Transform LangChain messages to expected format
+function transformLangChainMessage(langChainMessage: any): any {
+  // Handle LangChain message format
+  if (langChainMessage.lc && langChainMessage.kwargs) {
+    return {
+      content: langChainMessage.kwargs.content,
+      type: langChainMessage.id?.[2]?.toLowerCase() || 'ai', // Extract type from id array
+      ...langChainMessage.kwargs.additional_kwargs
+    };
   }
   
-  return agentMap.get(assistantId);
+  // Handle simple message format
+  if (langChainMessage.content && langChainMessage.type) {
+    return langChainMessage;
+  }
+  
+  // Fallback
+  return langChainMessage;
 }
 
 // --- preserved interfaces ---
@@ -66,7 +84,7 @@ type LocalStreamProps = {
 };
 
 // Our replacement for the original `useStream` hook.
-function useLocalStream({
+export function useLocalStream({
   assistantId,
   threadId,
   onThreadId,
@@ -101,34 +119,104 @@ function useLocalStream({
       abortControllerRef.current = new AbortController();
 
       try {
-        const graph = await getGraph(assistantId);
+        // Validate agent exists
+        validateAgent(assistantId);
 
-        const streamConfig = {
-          configurable: {
-            thread_id: threadId,
-            ...options?.configurable,
-          },
-          ...options?.checkpoint,
+        // Add human messages to state immediately so they appear in UI
+        if (payload.messages && payload.messages.length > 0) {
+          setValues((prev) => ({
+            ...prev,
+            messages: [...(prev.messages ?? []), ...payload.messages],
+          }));
+        }
+
+        // Prepare request body
+        const requestBody = {
+          messages: payload.messages || [],
+          threadId: threadId || undefined,
+          configurable: options?.configurable,
         };
 
-        const stream = graph.stream(payload, streamConfig);
+        // Make API call to stream endpoint
+        const response = await fetch(`/api/agents/${assistantId}/stream`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(requestBody),
+          signal: abortControllerRef.current.signal,
+        });
 
-        for await (const event of stream) {
-          if (abortControllerRef.current.signal.aborted) break;
+        if (!response.ok) {
+          throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+        }
 
-          const eventKeys = Object.keys(event);
-          if (event["__end__"]) {
-            // Stop processing if we've hit the end of the graph
-            break;
+        if (!response.body) {
+          throw new Error('No response body received');
+        }
+
+        // Process streaming response
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+
+        try {
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value);
+            const lines = chunk.split('\n');
+
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                try {
+                  const data = JSON.parse(line.slice(6));
+                  
+                  if (data.error) {
+                    throw new Error(data.error);
+                  }
+
+                  // Handle different response structures from the API
+                  let messagesToAdd: any[] = [];
+                  
+                  // Check for direct messages array
+                  if (data.messages && Array.isArray(data.messages)) {
+                    messagesToAdd = data.messages;
+                  }
+                  // Check for messages nested under different keys (like callModel, storeMemory, etc.)
+                  else {
+                    for (const key of Object.keys(data)) {
+                      if (data[key] && data[key].messages && Array.isArray(data[key].messages)) {
+                        messagesToAdd = [...messagesToAdd, ...data[key].messages];
+                      }
+                    }
+                  }
+
+                  if (messagesToAdd.length > 0) {
+                    // Transform LangChain messages to expected format
+                    const transformedMessages = messagesToAdd.map(transformLangChainMessage);
+                    
+                    setValues((prev) => ({
+                      ...prev,
+                      messages: [...(prev.messages ?? []), ...transformedMessages].filter(m => m.content),
+                    }));
+                  }
+
+                  if (data.interrupt) {
+                    setInterrupt(data.interrupt);
+                  }
+
+                  if (data.__end__) {
+                    break;
+                  }
+                } catch (parseError) {
+                  console.warn('Failed to parse SSE data:', parseError);
+                }
+              }
+            }
           }
-          if (eventKeys.some((key) => event[key]?.messages)) {
-            setValues((prev) => ({
-              ...prev,
-              messages: [...(prev.messages ?? []), ...eventKeys.map(k => event[k].messages).flat()].filter(m => m.content),
-            }));
-          } else if (event.interrupt) {
-            setInterrupt(event.interrupt);
-          }
+        } finally {
+          reader.releaseLock();
         }
       } catch (e) {
         if (e instanceof Error && e.name !== "AbortError") {

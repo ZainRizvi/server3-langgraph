@@ -5,6 +5,7 @@ import { getContentString } from "../utils";
 import { cn } from "@/lib/utils";
 import { Textarea } from "@/components/ui/textarea";
 import { BranchSwitcher, CommandBar } from "./shared";
+import type { StateType } from "@/providers/StreamLocal";
 
 function EditableContent({
   value,
@@ -56,7 +57,7 @@ export function HumanMessage({
       {
         checkpoint: parentCheckpoint,
         streamMode: ["values"],
-        optimisticValues: (prev) => {
+        optimisticValues: (prev: StateType) => {
           const values = meta?.firstSeenState?.values;
           if (!values) return prev;
 
@@ -99,7 +100,7 @@ export function HumanMessage({
           <BranchSwitcher
             branch={meta?.branch}
             branchOptions={meta?.branchOptions}
-            onSelect={(branch) => thread.setBranch(branch)}
+            onSelect={(branch) => (thread.setBranch as any)(branch)}
             isLoading={isLoading}
           />
           <CommandBar

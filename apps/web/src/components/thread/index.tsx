@@ -35,6 +35,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "../ui/tooltip";
+import type { StateType } from "@/providers/StreamLocal";
 
 function StickyToBottomContent(props: {
   content: ReactNode;
@@ -173,7 +174,7 @@ export function Thread() {
       { messages: [...toolMessages, newHumanMessage] },
       {
         streamMode: ["values"],
-        optimisticValues: (prev) => ({
+        optimisticValues: (prev: StateType) => ({
           ...prev,
           messages: [
             ...(prev.messages ?? []),

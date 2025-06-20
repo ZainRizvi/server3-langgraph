@@ -1,120 +1,113 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { agentMap } from '@repo/core/src/agents'
-
-interface StreamRequestBody {
-  messages: Array<{ content: string; type: string }>
-  threadId?: string
-  configurable?: Record<string, any>
-}
+import { NextRequest } from "next/server";
+import { agentMap } from "@repo/core/src/agents";
+import { InMemoryStore } from "@langchain/langgraph";
+import { MemorySaver } from "@langchain/langgraph";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { agentId: string } }
+  { params }: { params: Promise<{ agentId: string }> }
 ) {
   try {
-    const { agentId } = params
-
+    const { agentId } = await params;
+    
     // Validate agentId
     if (!agentId || agentId.trim() === '') {
-      return NextResponse.json(
-        { error: 'Agent ID is required' },
-        { status: 400 }
-      )
+      return new Response(
+        JSON.stringify({ error: 'Agent ID is required' }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
     }
 
-    // Check if agent exists
-    if (!agentMap.has(agentId)) {
-      return NextResponse.json(
-        { error: `Agent '${agentId}' not found` },
-        { status: 404 }
-      )
-    }
-
-    // Parse request body
-    let requestBody: StreamRequestBody
+    // Parse and validate request body
+    let body;
     try {
-      requestBody = await request.json()
+      body = await request.json();
     } catch (error) {
-      return NextResponse.json(
-        { error: 'Invalid JSON in request body' },
-        { status: 400 }
-      )
+      return new Response(
+        JSON.stringify({ error: 'Invalid JSON in request body' }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
     }
 
-    const { messages, threadId, configurable } = requestBody
+    const { messages, threadId, configurable } = body;
 
     // Validate required fields
     if (!messages || !Array.isArray(messages)) {
-      return NextResponse.json(
-        { error: 'Messages array is required' },
-        { status: 400 }
-      )
+      return new Response(
+        JSON.stringify({ error: 'Messages array is required' }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
     }
 
-    // Get the agent graph
-    const graph = agentMap.get(agentId)
+    const graph = agentMap.get(agentId);
     if (!graph) {
-      return NextResponse.json(
-        { error: `Agent '${agentId}' not available` },
-        { status: 500 }
-      )
+      return new Response(
+        JSON.stringify({ error: `Agent "${agentId}" not found` }),
+        { status: 404, headers: { "Content-Type": "application/json" } }
+      );
     }
 
-    // Create streaming response
-    const encoder = new TextEncoder()
-    const stream = new ReadableStream({
+    // Set up store and checkpointer based on environment
+    // For development: use in-memory stores
+    // For production: these would be configured based on environment variables
+    const store = new InMemoryStore();
+    const checkpointer = new MemorySaver();
+
+    // TODO: In production, configure stores based on environment:
+    // - Redis for session storage
+    // - MongoDB/PostgreSQL for persistent memory
+    // - Vector stores for semantic search
+    // Example:
+    // const store = process.env.NODE_ENV === 'production' 
+    //   ? new RedisStore(process.env.REDIS_URL)
+    //   : new InMemoryStore();
+
+    // Prepare configuration with required components
+    const graphConfig = {
+      configurable: {
+        ...configurable,
+        userId: threadId || "default",
+        model: configurable?.model || "anthropic/claude-3-7-sonnet-latest",
+      },
+      store,
+      checkpointer,
+    };
+
+    // Stream the graph execution
+    const stream = await graph.stream(
+      { messages },
+      graphConfig
+    );
+
+    const encoder = new TextEncoder();
+    const readable = new ReadableStream({
       async start(controller) {
         try {
-          // Prepare the input for the agent
-          const input = {
-            messages,
-            ...(configurable && { configurable })
+          for await (const chunk of stream) {
+            const data = JSON.stringify(chunk);
+            controller.enqueue(encoder.encode(`data: ${data}\n\n`));
           }
-
-          // Create stream configuration
-          const streamConfig = {
-            ...(threadId && { thread_id: threadId }),
-            ...(configurable && { configurable })
-          }
-
-          // Stream the agent execution
-          const agentStream = graph.stream(input, streamConfig)
-          
-          for await (const chunk of agentStream) {
-            // Convert chunk to Server-Sent Events format
-            const chunkString = `data: ${JSON.stringify(chunk)}\n\n`
-            controller.enqueue(encoder.encode(chunkString))
-          }
-          
-          controller.close()
+          controller.enqueue(encoder.encode(`data: {"__end__": true}\n\n`));
+          controller.close();
         } catch (error) {
-          console.error('Error in agent stream:', error)
-          const errorChunk = `data: ${JSON.stringify({ 
-            error: 'Agent execution failed',
-            details: error instanceof Error ? error.message : String(error)
-          })}\n\n`
-          controller.enqueue(encoder.encode(errorChunk))
-          controller.close()
+          console.error("Streaming error:", error);
+          controller.error(error);
         }
-      }
-    })
-
-    // Return streaming response
-    return new NextResponse(stream, {
-      headers: {
-        'Content-Type': 'text/event-stream; charset=utf-8',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-        'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Headers': 'Cache-Control',
       },
-    })
+    });
 
+    return new Response(readable, {
+      headers: {
+        "Content-Type": "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-cache",
+        "Connection": "keep-alive",
+      },
+    });
   } catch (error) {
-    console.error('Error in stream API:', error)
-    return NextResponse.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    )
+    console.error("API error:", error);
+    return new Response(
+      JSON.stringify({ error: "Internal server error" }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
   }
 } 

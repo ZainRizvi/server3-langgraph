@@ -2,11 +2,11 @@
  * Define the configurable parameters for the agent.
  */
 import { RunnableConfig } from "@langchain/core/runnables";
+import { Annotation } from "@langchain/langgraph";
 import {
   RESPONSE_SYSTEM_PROMPT_TEMPLATE,
   QUERY_SYSTEM_PROMPT_TEMPLATE,
-} from "./prompts.js";
-import { Annotation } from "@langchain/langgraph";
+} from "./prompts";
 
 /**
  * typeof ConfigurationAnnotation.State class for indexing and retrieval operations.
@@ -94,23 +94,19 @@ export const ConfigurationAnnotation = Annotation.Root({
  * @param config - The configuration object to use.
  * @returns An instance of typeof ConfigurationAnnotation.State with the specified configuration.
  */
-export function ensureConfiguration(
-  config: RunnableConfig | undefined = undefined,
-): typeof ConfigurationAnnotation.State {
-  const indexConfig = ensureIndexConfiguration(config);
-  const configurable = (config?.configurable || {}) as Partial<
-    typeof ConfigurationAnnotation.State
-  >;
-
+export function ensureConfiguration(config?: any) {
+  const configurable = config?.configurable || {};
   return {
-    ...indexConfig,
     responseSystemPromptTemplate:
-      configurable.responseSystemPromptTemplate ||
-      RESPONSE_SYSTEM_PROMPT_TEMPLATE,
+      configurable.responseSystemPromptTemplate || RESPONSE_SYSTEM_PROMPT_TEMPLATE,
     responseModel:
       configurable.responseModel || "anthropic/claude-3-7-sonnet-latest",
     querySystemPromptTemplate:
       configurable.querySystemPromptTemplate || QUERY_SYSTEM_PROMPT_TEMPLATE,
     queryModel: configurable.queryModel || "anthropic/claude-3-5-haiku-latest",
+    retrieverProvider: configurable.retrieverProvider || "elastic",
+    embeddingModel: configurable.embeddingModel || "openai/text-embedding-3-small",
+    userId: configurable.userId || "default",
+    searchKwargs: configurable.searchKwargs || {},
   };
 }

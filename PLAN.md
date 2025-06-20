@@ -64,7 +64,7 @@ For each part, first consider what unit tests should be added to verify that the
 
 This part updates StreamLocal to make API calls instead of importing server-side packages.
 
-- [ ] **Task 3.1: Update StreamLocal to Use Fetch API.**
+- [x] **Task 3.1: Update StreamLocal to Use Fetch API.**
     -   **File to modify:** `apps/web/src/providers/StreamLocal.tsx`.
     -   **Goal:** Replace direct agent imports with API calls.
     -   **Implementation:**

@@ -3,11 +3,11 @@ import { StateGraph } from "@langchain/langgraph";
 import {
   ConfigurationAnnotation,
   ensureConfiguration,
-} from "./configuration.js";
-import { StateAnnotation, InputStateAnnotation } from "./state.js";
-import { formatDocs, getMessageText, loadChatModel } from "./utils.js";
+} from "./configuration";
+import { StateAnnotation, InputStateAnnotation } from "./state";
+import { formatDocs, getMessageText, loadChatModel } from "./utils";
 import { z } from "zod";
-import { makeRetriever } from "./retrieval.js";
+import { makeRetriever } from "./retrieval";
 // Define the function that calls the model
 
 const SearchQuery = z.object({

@@ -32,7 +32,7 @@ function CustomComponent({
       {customComponents.map((customComponent) => (
         <LoadExternalComponent
           key={customComponent.id}
-          stream={thread}
+          stream={thread as any}
           message={customComponent}
           meta={{ ui: customComponent }}
         />
@@ -138,14 +138,14 @@ export function AssistantMessage({
           )}
 
           {message && <CustomComponent message={message} thread={thread} />}
-          {isAgentInboxInterruptSchema(threadInterrupt?.value) &&
+          {isAgentInboxInterruptSchema((threadInterrupt as any)?.value) &&
             (isLastMessage || hasNoAIOrToolMessages) && (
-              <ThreadView interrupt={threadInterrupt.value} />
+              <ThreadView interrupt={(threadInterrupt as any).value} />
             )}
-          {threadInterrupt?.value &&
-          !isAgentInboxInterruptSchema(threadInterrupt.value) &&
+          {(threadInterrupt as any)?.value &&
+          !isAgentInboxInterruptSchema((threadInterrupt as any).value) &&
           isLastMessage ? (
-            <GenericInterruptView interrupt={threadInterrupt.value} />
+            <GenericInterruptView interrupt={(threadInterrupt as any).value} />
           ) : null}
           <div
             className={cn(
@@ -156,7 +156,7 @@ export function AssistantMessage({
             <BranchSwitcher
               branch={meta?.branch}
               branchOptions={meta?.branchOptions}
-              onSelect={(branch) => thread.setBranch(branch)}
+              onSelect={(branch) => (thread.setBranch as any)(branch)}
               isLoading={isLoading}
             />
             <CommandBar
