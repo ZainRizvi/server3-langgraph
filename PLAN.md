@@ -19,15 +19,14 @@ After completing each task, run `npm install` and `npm run build` for basic sani
 
 This part creates two different exports from the core package: one for client-side use (agent metadata only) and one for server-side use (full agent implementations).
 
-- [ ] **Task 1.1: Modify Agent Generation Script.**
+- [x] **Task 1.1: Modify Agent Generation Script.**
     -   **File to modify:** `packages/core/scripts/generate-agent-exports.mjs`.
     -   **Goal:** Generate two separate index files for different use cases.
     -   **Implementation:**
         -   Generate `packages/core/src/agents/index.ts` - Full agent map with actual graph imports (server-side only)
         -   Generate `packages/core/src/agents/metadata.ts` - Agent metadata only (client-safe)
         -   The metadata file should export:
-            -   `agentNames: string[]` - Array of available agent names
-            -   `agentMetadata: Record<string, { name: string, description?: string }>` - Agent info without implementations
+            -   `agentMetadata: Record<string, { name: string, description?: string }>` - Agent info without implementations (agent names can be derived using `Object.keys(agentMetadata)`)
         -   Update package.json exports to include both files
 
 ### Part 2: Create Local Agent API Endpoints
@@ -59,7 +58,7 @@ This part updates StreamLocal to make API calls instead of importing server-side
     -   **Goal:** Replace direct agent imports with API calls.
     -   **Implementation:**
         -   Remove all imports of server-side packages
-        -   Import `agentNames` from `@repo/core/agents/metadata` for validation
+        -   Import `agentMetadata` from `@repo/core/agents/metadata` for validation
         -   Update `getGraph` function to validate agent existence using metadata
         -   Update `submit` function to POST to `/api/agents/[agentId]/stream`
         -   Implement proper streaming response handling using fetch with ReadableStream

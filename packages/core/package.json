@@ -34,6 +34,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./package.json": "./package.json",
+    "./src/agents": "./src/agents/index.ts",
+    "./src/agents/metadata": "./src/agents/metadata.ts",
     "./agents/memory-agent": "./src/agents/memory-agent/graph.ts",
     "./agents/react-agent": "./src/agents/react-agent/graph.ts",
     "./agents/research-agent/index-graph": "./src/agents/research-agent/index-graph/graph.ts",

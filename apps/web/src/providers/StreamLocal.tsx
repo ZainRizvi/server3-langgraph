@@ -17,28 +17,15 @@ import {
   type RemoveUIMessage,
 } from "@langchain/langgraph-sdk/react-ui";
 import { last } from "lodash";
+import { agentMap } from "@repo/core/src/agents";
 
-// A map to hold our dynamically imported agent graphs.
-const agentGraphs = new Map<string, any>();
-
-// Dynamically loads a graph from the apps/agents directory.
+// Loads a graph from the agentMap based on the assistantId
 async function getGraph(assistantId: string): Promise<any> {
-  if (agentGraphs.has(assistantId)) {
-    return agentGraphs.get(assistantId);
+  if (!agentMap.has(assistantId)) {
+    throw new Error(`Agent "${assistantId}" not found. Available agents: ${Array.from(agentMap.keys()).join(", ")}`);
   }
-
-  try {
-    // Note: This dynamic import path assumes a consistent export `graph` from each agent's graph.ts file.
-    const graphModule = await import(`../../../../agents/src/${assistantId}/graph`);
-    if (!graphModule.graph) {
-      throw new Error(`Graph export not found for agent: ${assistantId}`);
-    }
-    agentGraphs.set(assistantId, graphModule.graph);
-    return graphModule.graph;
-  } catch (e) {
-    console.error(`Failed to load graph for agent: ${assistantId}`, e);
-    throw new Error(`Could not load agent "${assistantId}".`);
-  }
+  
+  return agentMap.get(assistantId);
 }
 
 // --- preserved interfaces ---
