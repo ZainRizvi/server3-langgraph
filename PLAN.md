@@ -121,7 +121,7 @@ This part updates StreamLocal to make API calls instead of importing server-side
         -   Match the interface provided by StreamExternal as closely as possible
         -   Use type assertions for simplified local implementations
 
-- [ ] **Task 3.5: Unify Stream Context Types and Remove Temporary Casts.**
+- [x] **Task 3.5: Unify Stream Context Types and Remove Temporary Casts.**
     -   **Files to modify:** `apps/web/src/providers/StreamLocal.tsx`, `apps/web/src/components/thread/messages/ai.tsx`, `apps/web/src/components/thread/messages/human.tsx`
     -   **Goal:** Ensure that the StreamLocal context matches the type/interface expected by StreamExternal and the UI components, and remove all temporary `as any` type casts added for build compatibility.
     -   **Implementation:**

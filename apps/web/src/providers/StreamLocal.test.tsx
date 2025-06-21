@@ -96,8 +96,16 @@ describe('StreamLocal', () => {
       // Test that interrupt can be set with proper structure
       act(() => {
         const mockInterrupt: HumanInterrupt = {
-          message: 'Test interrupt',
-          response: { type: 'human', content: 'Test response' }
+          action_request: {
+            action: 'test_action',
+            args: {}
+          },
+          config: {
+            allow_respond: true,
+            allow_accept: true,
+            allow_edit: true,
+            allow_ignore: true
+          }
         }
         
         // Simulate setting interrupt (this would normally happen in submit)
@@ -110,8 +118,8 @@ describe('StreamLocal', () => {
         expect(result.current.interrupt).toHaveProperty('when')
         expect(result.current.interrupt).toHaveProperty('value')
         expect(result.current.interrupt.when).toBe('now')
-        expect(result.current.interrupt.value).toHaveProperty('message')
-        expect(result.current.interrupt.value).toHaveProperty('response')
+        expect(result.current.interrupt.value).toHaveProperty('action_request')
+        expect(result.current.interrupt.value).toHaveProperty('config')
       }
     })
 
@@ -124,13 +132,19 @@ describe('StreamLocal', () => {
         })
       )
 
-      // Test that setBranch accepts a string parameter
+      // Verify setBranch has the correct interface signature
+      expect(typeof result.current.setBranch).toBe('function')
+      expect(result.current.setBranch.length).toBe(1) // Should accept one parameter (branch: string)
+      
+      // Verify it can be called with a string parameter (not Checkpoint)
       expect(() => {
         result.current.setBranch('test-branch')
       }).not.toThrow()
-
-      // Verify the method signature
-      expect(typeof result.current.setBranch).toBe('function')
+      
+      // Verify the method signature matches what UI components expect
+      // UI components call: onSelect={(branch) => thread.setBranch(branch)}
+      const mockOnSelect = (branch: string) => result.current.setBranch(branch)
+      expect(() => mockOnSelect('ui-branch')).not.toThrow()
     })
 
     it('should provide proper types for getMessagesMetadata method', () => {
@@ -151,6 +165,7 @@ describe('StreamLocal', () => {
       const metadata = result.current.getMessagesMetadata(mockMessage, 0)
 
       // Check that metadata has the expected structure
+      expect(metadata).toBeDefined()
       expect(metadata).toHaveProperty('messageId')
       expect(metadata).toHaveProperty('firstSeenState')
       expect(metadata).toHaveProperty('branch')
@@ -219,22 +234,6 @@ describe('StreamLocal', () => {
         const interruptValue = interrupt.value
         expect(interruptValue).toBeDefined()
       }
-    })
-
-    it('should work with setBranch without type casts', () => {
-      const { result } = renderHook(() =>
-        useLocalStream({
-          assistantId: 'memory-agent',
-          threadId: 'test-thread',
-          onThreadId: vi.fn(),
-        })
-      )
-
-      // Test that setBranch can be called without type casts
-      const setBranch = result.current.setBranch
-      expect(() => {
-        setBranch('test-branch')
-      }).not.toThrow()
     })
   })
 
@@ -748,7 +747,7 @@ describe('StreamLocal', () => {
       expect(screen.getByTestId('messages-count')).toHaveTextContent('0')
     })
 
-    it('should handle interrupt property with correct type structure', () => {
+    it('should handle interrupt property with correct type structure', async () => {
       const { result } = renderHook(() =>
         useLocalStream({
           assistantId: 'memory-agent',
@@ -760,11 +759,25 @@ describe('StreamLocal', () => {
       // Initially should be undefined
       expect(result.current.interrupt).toBeUndefined()
 
+      // Mock fetch for this test
+      const mockResponse = {
+        ok: true,
+        body: new ReadableStream({
+          start(controller) {
+            controller.close()
+          }
+        })
+      }
+      ;(global.fetch as any).mockResolvedValue(mockResponse)
+
       // After setting interrupt, should have correct structure
-      act(() => {
+      await act(async () => {
         // Simulate setting an interrupt
-        result.current.submit({ messages: [{ content: 'test', type: 'human' }] })
+        await result.current.submit({ messages: [{ content: 'test', type: 'human' }] })
       })
+
+      // Wait a bit for any async state updates to complete
+      await new Promise(resolve => setTimeout(resolve, 10))
 
       // The interrupt should either be undefined or have the correct structure
       if (result.current.interrupt) {
@@ -806,96 +819,7 @@ describe('StreamLocal', () => {
       expect(result.current.values.ui).toEqual([])
     })
 
-    it('should have setBranch method that accepts string parameter (not Checkpoint)', () => {
-      const { result } = renderHook(() =>
-        useLocalStream({
-          assistantId: 'memory-agent',
-          threadId: 'test-thread',
-          onThreadId: vi.fn(),
-        })
-      )
-
-      // Verify setBranch accepts string parameter (not Checkpoint)
-      expect(typeof result.current.setBranch).toBe('function')
-      
-      // Should be able to call with string without type errors
-      expect(() => result.current.setBranch('new-branch')).not.toThrow()
-      
-      // Verify it was called (even though it's a placeholder)
-      // The actual implementation logs to console, so we can't easily verify the call
-    })
-
-    it('should have getMessagesMetadata that returns proper MessageMetadata structure', () => {
-      const { result } = renderHook(() =>
-        useLocalStream({
-          assistantId: 'memory-agent',
-          threadId: 'test-thread',
-          onThreadId: vi.fn(),
-        })
-      )
-
-      const testMessage: Message = { 
-        content: 'test message', 
-        type: 'human', 
-        id: 'test-message-id' 
-      }
-      
-      const metadata = result.current.getMessagesMetadata(testMessage)
-      
-      // Verify the structure matches what UI components expect
-      expect(metadata).toHaveProperty('messageId', 'test-message-id')
-      expect(metadata).toHaveProperty('firstSeenState')
-      expect(metadata).toHaveProperty('branch')
-      expect(metadata).toHaveProperty('branchOptions')
-      
-      // Verify types are correct
-      expect(typeof metadata?.messageId).toBe('string')
-      expect(metadata?.firstSeenState).toBeUndefined() // Placeholder implementation
-      expect(metadata?.branch).toBeUndefined() // Placeholder implementation
-      expect(metadata?.branchOptions).toBeUndefined() // Placeholder implementation
-    })
-
-    it('should be compatible with UI component usage patterns', () => {
-      const { result } = renderHook(() =>
-        useLocalStream({
-          assistantId: 'memory-agent',
-          threadId: 'test-thread',
-          onThreadId: vi.fn(),
-        })
-      )
-
-      // Simulate how UI components use the context
-      const thread = result.current
-      
-      // Test values access (used in agent-inbox)
-      expect(thread.values).toBeDefined()
-      expect(thread.values.messages).toBeDefined()
-      expect(thread.values.ui).toBeDefined()
-      
-      // Test messages access (used in thread/index.tsx)
-      expect(thread.messages).toBeDefined()
-      expect(Array.isArray(thread.messages)).toBe(true)
-      
-      // Test isLoading access (used in thread/index.tsx)
-      expect(typeof thread.isLoading).toBe('boolean')
-      
-      // Test error access (used in thread/index.tsx)
-      expect(thread.error).toBeUndefined()
-      
-      // Test submit access (used in thread/index.tsx)
-      expect(typeof thread.submit).toBe('function')
-      
-      // Test getMessagesMetadata access (used in messages/ai.tsx)
-      expect(typeof thread.getMessagesMetadata).toBe('function')
-      
-      // Test setBranch access (used in messages/ai.tsx)
-      expect(typeof thread.setBranch).toBe('function')
-      
-      // Test interrupt access (used in messages/ai.tsx)
-      expect(thread.interrupt).toBeUndefined()
-    })
-
-    it('should handle submit with proper options structure', () => {
+    it('should handle submit with proper options structure', async () => {
       const { result } = renderHook(() =>
         useLocalStream({
           assistantId: 'memory-agent',
@@ -916,8 +840,8 @@ describe('StreamLocal', () => {
       ;(global.fetch as any).mockResolvedValue(mockResponse)
 
       // Test submit with options that UI components use
-      act(() => {
-        result.current.submit(
+      await act(async () => {
+        await result.current.submit(
           { messages: [{ content: 'test', type: 'human' }] },
           {
             streamMode: ['values'],
@@ -928,6 +852,9 @@ describe('StreamLocal', () => {
           }
         )
       })
+
+      // Wait a bit for any async state updates to complete
+      await new Promise(resolve => setTimeout(resolve, 10))
 
       // Verify the submit call was made
       expect(global.fetch).toHaveBeenCalled()

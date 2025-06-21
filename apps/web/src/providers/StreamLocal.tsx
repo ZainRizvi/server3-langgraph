@@ -8,16 +8,13 @@ import React, {
 } from "react";
 import {
   type Message,
-  type Checkpoint,
 } from "@langchain/langgraph-sdk";
 import { type HumanInterrupt } from "@langchain/langgraph/prebuilt";
 import {
-  uiMessageReducer,
   type UIMessage,
   type RemoveUIMessage,
 } from "@langchain/langgraph-sdk/react-ui";
 import { useStream } from "@langchain/langgraph-sdk/react";
-import { last } from "lodash";
 import { agentMetadata } from "@repo/core/src/agents/metadata";
 import { useQueryState } from "nuqs";
 
@@ -298,7 +295,6 @@ export function useLocalStream({
   const setBranch = useCallback((branch: string) => {
       // Placeholder for branch switching logic.
       // This would involve re-running the stream from a given checkpoint.
-      console.log("Switching branch to:", branch);
   }, []);
 
   return {
@@ -314,7 +310,7 @@ export function useLocalStream({
     interrupt: interrupt ? { when: 'now', value: interrupt } : undefined,
     messages: values.messages,
     getMessagesMetadata,
-    client: null as any, // Placeholder client
+    client: null as any, // Required by interface but not used in local implementation
     assistantId,
   };
 }

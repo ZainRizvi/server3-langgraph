@@ -100,7 +100,7 @@ export function HumanMessage({
           <BranchSwitcher
             branch={meta?.branch}
             branchOptions={meta?.branchOptions}
-            onSelect={(branch) => (thread.setBranch as any)(branch)}
+            onSelect={(branch) => thread.setBranch(branch)}
             isLoading={isLoading}
           />
           <CommandBar

@@ -122,7 +122,9 @@ export function Thread() {
       return;
     }
     try {
-      const message = (stream.error as any).message;
+      const message = stream.error && typeof stream.error === 'object' && 'message' in stream.error 
+        ? (stream.error as { message: string }).message 
+        : String(stream.error);
       if (!message || lastError.current === message) {
         // Message has already been logged. do not modify ref, return early.
         return;
