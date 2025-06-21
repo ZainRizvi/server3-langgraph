@@ -176,13 +176,14 @@ This part creates a proper TypeScript interface that defines the contract that b
         -   Ensure tests fail if StreamLocal implementation changes and breaks interface contract
         -   Verify that StreamLocal can be used wherever the SDK's useStream return type is expected
 
-### Part 5: Enable Easy Switching Between Providers
-- [ ] **Task 5.1: Implement Conditional Provider Export.**
+### CANCELLED Part 5: Enable Easy Switching Between Providers
+CANCELLED Since typescript does not allow for conditional imports without a perf hit. Not worth it
+- [CANCELLED] **Task 5.1: Implement Conditional Provider Export.**
     -   **File to modify:** `apps/web/src/providers/Stream.tsx`.
     -   **Goal:** Export the correct provider based on environment variable.
     -   **Implementation:**
-        -   Check `process.env.NEXT_PUBLIC_STREAM_LOCAL`
-        -   Export from `./StreamLocal` if `'true'`, otherwise from `./StreamExternal`
+        -   Check `process.env.USE_LANGGRAPH_PLATFORM`
+        -   Export from `./StreamExternal` if `'true'`, otherwise from `./StreamLocal`
 
 ## Benefits of This Architecture
 
