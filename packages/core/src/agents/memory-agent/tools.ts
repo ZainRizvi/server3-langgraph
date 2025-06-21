@@ -20,7 +20,7 @@ export function initializeTools(config?: LangGraphRunnableConfig) {
   async function upsertMemory(opts: {
     content: string;
     context: string;
-    memoryId?: string;
+    memoryId?: string | null;
   }): Promise<string> {
     const { content, context, memoryId } = opts;
     if (!config || !config.store) {
