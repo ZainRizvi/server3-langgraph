@@ -6,6 +6,7 @@ import { render, screen } from '@testing-library/react'
 import { Message } from '@langchain/langgraph-sdk'
 import { withNuqsTestingAdapter } from 'nuqs/adapters/testing'
 import { HumanInterrupt } from '@langchain/langgraph/prebuilt'
+import type { StreamProviderInterface } from './types'
 
 // Mock fetch globally
 global.fetch = vi.fn()
@@ -148,33 +149,21 @@ describe('StreamLocal', () => {
     })
 
     it('should provide proper types for getMessagesMetadata method', () => {
-      const { result } = renderHook(() =>
+      const { result } = renderHook(() => 
         useLocalStream({
           assistantId: 'memory-agent',
-          threadId: 'test-thread',
+          threadId: null,
           onThreadId: vi.fn(),
         })
-      )
+      );
 
-      const mockMessage: Message = {
-        id: 'test-message-id',
-        type: 'human',
-        content: 'Test message'
-      }
-
-      const metadata = result.current.getMessagesMetadata(mockMessage, 0)
-
-      // Check that metadata has the expected structure
-      expect(metadata).toBeDefined()
-      expect(metadata).toHaveProperty('messageId')
-      expect(metadata).toHaveProperty('firstSeenState')
-      expect(metadata).toHaveProperty('branch')
-      expect(metadata).toHaveProperty('branchOptions')
+      const mockMessage = { id: 'test-message-id', type: 'human' as const, content: 'test' };
+      const metadata = result.current.getMessagesMetadata(mockMessage)
 
       expect(metadata.messageId).toBe('test-message-id')
       expect(metadata.firstSeenState).toBeUndefined()
-      expect(metadata.branch).toBeUndefined()
-      expect(metadata.branchOptions).toBeUndefined()
+      expect(metadata.branch).toBe('main') // Now returns 'main' to match interface
+      expect(metadata.branchOptions).toEqual([]) // Now returns empty array to match interface
     })
 
     it('should provide proper types for client property', () => {
@@ -911,6 +900,126 @@ describe('StreamLocal', () => {
       await new Promise(resolve => setTimeout(resolve, 100));
 
       expect(result.current.interrupt).toBeDefined();
+    });
+  })
+
+  describe('StreamLocal Interface Implementation', () => {
+    it('should implement StreamProviderInterface correctly', () => {
+      const { result } = renderHook(() => 
+        useLocalStream({
+          assistantId: 'memory-agent',
+          threadId: null,
+          onThreadId: vi.fn(),
+        })
+      );
+
+      // Verify all required properties exist
+      expect(result.current).toHaveProperty('values');
+      expect(result.current).toHaveProperty('error');
+      expect(result.current).toHaveProperty('isLoading');
+      expect(result.current).toHaveProperty('stop');
+      expect(result.current).toHaveProperty('submit');
+      expect(result.current).toHaveProperty('branch');
+      expect(result.current).toHaveProperty('setBranch');
+      expect(result.current).toHaveProperty('history');
+      expect(result.current).toHaveProperty('experimental_branchTree');
+      expect(result.current).toHaveProperty('interrupt');
+      expect(result.current).toHaveProperty('messages');
+      expect(result.current).toHaveProperty('getMessagesMetadata');
+      expect(result.current).toHaveProperty('client');
+      expect(result.current).toHaveProperty('assistantId');
+    });
+
+    it('should have correct property types', () => {
+      const { result } = renderHook(() => 
+        useLocalStream({
+          assistantId: 'memory-agent',
+          threadId: null,
+          onThreadId: vi.fn(),
+        })
+      );
+
+      // Verify property types match interface
+      expect(typeof result.current.isLoading).toBe('boolean');
+      expect(typeof result.current.branch).toBe('string');
+      expect(typeof result.current.assistantId).toBe('string');
+      expect(Array.isArray(result.current.history)).toBe(true);
+      expect(Array.isArray(result.current.messages)).toBe(true);
+      expect(typeof result.current.values).toBe('object');
+      expect(typeof result.current.experimental_branchTree).toBe('object');
+      // error can be null or undefined initially
+      expect(result.current.error === null || result.current.error === undefined || result.current.error instanceof Error).toBe(true);
+    });
+
+    it('should have correct method signatures', () => {
+      const { result } = renderHook(() => 
+        useLocalStream({
+          assistantId: 'memory-agent',
+          threadId: null,
+          onThreadId: vi.fn(),
+        })
+      );
+
+      // Verify method signatures
+      expect(typeof result.current.stop).toBe('function');
+      expect(typeof result.current.submit).toBe('function');
+      expect(typeof result.current.setBranch).toBe('function');
+      expect(typeof result.current.getMessagesMetadata).toBe('function');
+      
+      // Verify method parameter counts
+      expect(result.current.stop.length).toBe(0);
+      expect(result.current.submit.length).toBe(2); // submit(payload, options)
+      expect(result.current.setBranch.length).toBe(1); // setBranch(branch: string)
+      expect(result.current.getMessagesMetadata.length).toBe(2); // getMessagesMetadata(message, index?)
+    });
+
+    it('should return correct message metadata structure', () => {
+      const { result } = renderHook(() => 
+        useLocalStream({
+          assistantId: 'memory-agent',
+          threadId: null,
+          onThreadId: vi.fn(),
+        })
+      );
+
+      const mockMessage = { id: 'test-id', type: 'human' as const, content: 'test' };
+      const metadata = result.current.getMessagesMetadata(mockMessage);
+
+      // Verify metadata structure matches interface
+      expect(metadata).toBeDefined();
+      expect(metadata).toHaveProperty('messageId');
+      expect(metadata).toHaveProperty('firstSeenState');
+      expect(metadata).toHaveProperty('branch');
+      expect(metadata).toHaveProperty('branchOptions');
+      
+      expect(typeof metadata.messageId).toBe('string');
+      // branchOptions can be undefined in the current implementation
+      expect(metadata.branchOptions === undefined || Array.isArray(metadata.branchOptions)).toBe(true);
+    });
+
+    it('should handle interface compatibility with UI components', () => {
+      const { result } = renderHook(() => 
+        useLocalStream({
+          assistantId: 'memory-agent',
+          threadId: null,
+          onThreadId: vi.fn(),
+        })
+      );
+
+      // Test that the interface can be used where UI components expect it
+      const streamContext = result.current as StreamProviderInterface;
+      
+      // Verify we can access all required properties without type errors
+      expect(streamContext.values).toBeDefined();
+      expect(streamContext.messages).toBeDefined();
+      expect(streamContext.isLoading).toBeDefined();
+      // error can be undefined initially
+      expect(streamContext.error === null || streamContext.error === undefined || streamContext.error instanceof Error).toBe(true);
+      
+      // Verify we can call all required methods without type errors
+      expect(() => streamContext.stop()).not.toThrow();
+      expect(() => streamContext.setBranch('test-branch')).not.toThrow();
+      expect(() => streamContext.getMessagesMetadata({ id: 'test', type: 'human' as const, content: 'test' })).not.toThrow();
     });
   })
 }) 

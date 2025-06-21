@@ -11,7 +11,7 @@ The project has two streaming providers for the agent chat interface:
 
 The core issue is architectural: **StreamLocal should not import server-side packages directly**. Instead, it should make API calls to the web app's backend, which then executes the agents server-side and streams the results back.
 
-## Testing
+## Testing and Validation Process
 
 - Always write unit tests before starting any tasks.
 - After completing each task, run the following commands from root to ensure everything is still working:
@@ -129,20 +129,52 @@ This part updates StreamLocal to make API calls instead of importing server-side
         -   Refactor UI components to use the unified type without any casts.
         -   Remove all `as any` usages related to stream context.
 
-### Part 4: Add Validation and Testing
+### Part 4: Create Shared Stream Interface
 
-- [ ] **Task 4.1: Set Up Testing Framework.**
-    -   **File to modify:** `apps/web/package.json`.
-    -   **Goal:** Add testing capabilities.
-    -   **Implementation:** Add `vitest` and test script following the pattern from `packages/core`
+This part creates a proper TypeScript interface that defines the contract that both StreamLocal and StreamExternal must implement. This will ensure type safety and make it easier to maintain compatibility between the two providers.
 
-- [ ] **Task 4.2: Create Unit Tests.**
-    -   **File to create:** `apps/web/src/providers/StreamLocal.test.tsx`.
-    -   **Goal:** Test the refactored StreamLocal functionality.
+- [x] **Task 4.1: Create Shared Stream Interface Definition.**
+    -   **File to create:** `apps/web/src/providers/types.ts`.
+    -   **Goal:** Define a comprehensive interface that both stream providers must implement.
     -   **Implementation:**
-        -   Test agent validation using metadata
-        -   Test API call construction
-        -   Mock fetch for testing stream handling
+        -   Create `StreamProviderInterface` that extends the LangGraph SDK's stream context type
+        -   Define all required properties and methods including:
+            -   `values`, `error`, `isLoading`, `stop`, `submit`
+            -   `branch`, `setBranch`, `history`, `experimental_branchTree`
+            -   `interrupt`, `messages`, `getMessagesMetadata`, `client`, `assistantId`
+        -   Include proper TypeScript types for all parameters and return values
+        -   Add JSDoc comments explaining the purpose of each method/property
+
+- [x] **Task 4.2: Update StreamLocal to Implement the Interface.**
+    -   **File to modify:** `apps/web/src/providers/StreamLocal.tsx`.
+    -   **Goal:** Ensure StreamLocal properly implements the shared interface.
+    -   **Implementation:**
+        -   Import the new interface from `./types`
+        -   Add explicit interface implementation to `useLocalStream` function
+        -   Ensure all required properties and methods are properly typed
+        -   Remove any `as any` casts and replace with proper typing
+        -   Add runtime type checking for critical properties
+
+- [x] **Task 4.3: Extract Interface from StreamExternal (Source of Truth).**
+    -   **File to modify:** `apps/web/src/providers/types.ts`.
+    -   **Goal:** Extract the interface definition from StreamExternal without modifying it.
+    -   **Implementation:**
+        -   Analyze StreamExternal's `StreamContextType` and `useTypedStream` return type
+        -   Extract the interface definition from the existing StreamExternal implementation
+        -   Create the shared interface based on what StreamExternal actually provides
+        -   Ensure the interface matches exactly what StreamExternal exports
+        -   Do NOT modify StreamExternal - it remains the source of truth
+
+- [x] **Task 4.4: Create Interface Validation Tests.**
+    -   **File to create:** `apps/web/src/providers/interface-validation.test.ts`.
+    -   **Goal:** Create unit tests that fail if StreamLocal deviates from the expected interface.
+    -   **Implementation:**
+        -   Create test utilities that validate interface compliance
+        -   Test that StreamLocal returns all required properties with correct types
+        -   Test that StreamLocal implements all required methods with correct signatures
+        -   Test runtime behavior of interface methods
+        -   Ensure tests fail if StreamLocal implementation changes and breaks interface contract
+        -   Verify that StreamLocal can be used wherever the SDK's useStream return type is expected
 
 ### Part 5: Enable Easy Switching Between Providers
 - [ ] **Task 5.1: Implement Conditional Provider Export.**

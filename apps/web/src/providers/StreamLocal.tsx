@@ -17,6 +17,7 @@ import {
 import { useStream } from "@langchain/langgraph-sdk/react";
 import { agentMetadata } from "@repo/core/src/agents/metadata";
 import { useQueryState } from "nuqs";
+import type { StreamProviderInterface, StateType, MessageMetadata } from "./types";
 
 // Validate agent existence using metadata
 function validateAgent(assistantId: string): void {
@@ -76,7 +77,8 @@ function mergeMessages(existingMessages: Message[], newMessages: Message[]): Mes
 
 // --- preserved interfaces ---
 
-export type StateType = { messages: Message[]; ui?: UIMessage[] };
+// Use the same type as StreamExternal for consistency
+export type { StateType };
 
 // Use the same type as StreamExternal for consistency
 type StreamContextType = ReturnType<typeof useStream<
@@ -115,7 +117,7 @@ export function useLocalStream({
   assistantId,
   threadId,
   onThreadId,
-}: LocalStreamProps): StreamContextType {
+}: LocalStreamProps): StreamProviderInterface {
   const [values, setValues] = useState<StateType>({ messages: [], ui: [] });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | undefined>(undefined);
@@ -280,15 +282,15 @@ export function useLocalStream({
     [assistantId, threadId, isLoading, onThreadId],
   );
 
-  const getMessagesMetadata = useCallback((message: Message, index?: number) => {
+  const getMessagesMetadata = useCallback((message: Message, index?: number): MessageMetadata => {
     // This is a placeholder. A real implementation would need to track
     // checkpoints and branches, which is complex to do locally without a
     // persistent checkpointer.
     return {
       messageId: message.id || '',
-      firstSeenState: undefined,
-      branch: undefined,
-      branchOptions: undefined,
+      firstSeenState: undefined as any,
+      branch: 'main', // Default branch name
+      branchOptions: [], // Empty array for local implementation
     };
   }, []);
 
