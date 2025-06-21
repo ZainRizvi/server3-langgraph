@@ -35,6 +35,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "../ui/tooltip";
+import type { StateType } from "@/providers/StreamLocal";
 
 function StickyToBottomContent(props: {
   content: ReactNode;
@@ -121,7 +122,9 @@ export function Thread() {
       return;
     }
     try {
-      const message = (stream.error as any).message;
+      const message = stream.error && typeof stream.error === 'object' && 'message' in stream.error 
+        ? (stream.error as { message: string }).message 
+        : String(stream.error);
       if (!message || lastError.current === message) {
         // Message has already been logged. do not modify ref, return early.
         return;
@@ -173,7 +176,7 @@ export function Thread() {
       { messages: [...toolMessages, newHumanMessage] },
       {
         streamMode: ["values"],
-        optimisticValues: (prev) => ({
+        optimisticValues: (prev: StateType) => ({
           ...prev,
           messages: [
             ...(prev.messages ?? []),
